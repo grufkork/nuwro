@@ -7,6 +7,7 @@
 #include "TFile.h"
 #include "TH1.h"
 #include "qelevent.h"
+#include "ab_initio_event.h"
 #include "e_el_event.h"
 #include "e_spp_event.h"
 #include "hypevent.h"
@@ -305,9 +306,13 @@ void NuWro::makeevent(event* e, params &p)
 			if (p.dyn_qel_cc) // qel cc
 			{
 				if(p.sf_method>0)
-					sfevent (p, *e, *_nucleus);
-				else
-					qelevent1 (p, *e, *_nucleus, false);
+					sfevent (p, *e, *_nucleus); //MARKER
+				else {
+                    double abw = ab_initio_event(p, *e, *_nucleus, false);
+					// double qel_weight = qelevent1 (p, *e, *_nucleus, false); // MARKER qel cc
+                    // cout << "ab_weight: " << abw << " qel_weight: " << qel_weight << endl;
+                    // cout << "ab_weight: " << abw / qel_weight << endl;
+                }
 			}
 			break;
 		case 1:
