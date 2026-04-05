@@ -38,10 +38,6 @@ int Stupid_2D_to_1D(int n, int m, int N){
 double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     ////////////////////////////////////////////////////////////////////////
 {
-    double spacing = 4.0;
-    int gridsteps = 300;
-    double fermi_constant = 1.1663787e-11;
-    double PI = 3.14159265359;
 
 
     // Print log
@@ -140,106 +136,20 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 
     double m_l = lepton_out.mass();
 
-    // Q**2 = q**2-w**2
-
-    // double omega = w;
     double eps = lepton_in_rest.t;
-    double eps_prim = lepton_out_rest.t;//eps - omega;
+    double eps_prim = lepton_out_rest.t;
     double omega = eps-eps_prim;
 
     vect diff = lepton_in_rest-lepton_out_rest;
-    double q = sqrt(diff.x * diff.x + diff.y*diff.y + diff.z*diff.z);
 
-    // double Q_sq = -q2;
-    // double q = lepton_in-lepton
-    // double q = sqrt(-q2);
-    // double q = sqrt(Q_sq + omega * omega * 0.0);
+    // Both below give same answer
+    // Boosting/rest frame does not affect result
+    // double q = sqrt(diff.x * diff.x + diff.y*diff.y + diff.z*diff.z);
+    double q = sqrt(-q2 + omega*omega); // From Q^2 = q^2 - w^2, -q2=Q^2
+    // std::cout << q << " " << " " << " " << std::endl;
 
-
-    double k = eps;
-    double k_prim = sqrt(eps_prim * eps_prim - m_l*m_l);
-
-    double Q_sq = q*q - omega * omega;
-
-
-    double temp = (k*k + k_prim * k_prim - q*q) / (2.0 * k * k_prim);
-    double costheta = temp;
-    //  w/y
-    //  ^  2  3 
-    //  |  
-    //  |  0  1
-    //   -----> q/x
-
-    // for(double iterval = 0.0; iterval < 300.0; iterval += 1.0){
-        int table_x, table_y;
-        double xfrac, yfrac;
-
-        // q = 300;
-        // omega = iterval;
-
-
-        // std::cout << "q: " << q << " w: " << w << std::endl;
-
-        table_x = (int)floor(q/spacing);
-        table_y = (int)floor(omega/spacing);
-        xfrac = q/spacing - table_x;
-        yfrac = omega/spacing - table_y;
-
-        // std::cout << "table_x: " << table_x << " table_y: " << table_y << std::endl;
-
-        // List of pointers to curves
-        double *curves[] = {lfg_R00, lfg_R0z, lfg_Rzz, lfg_Rxx, lfg_Rxy};
-        double resolved_vals[] = {0.0, 0.0, 0.0, 0.0, 0.0};
-
-        for(int i = 0; i < 5; i++){
-            double val__, valx_, val_y, valxy;
-
-            val__ = curves[i][Stupid_2D_to_1D(table_x + 0, table_y + 0, gridsteps)];
-            valx_ = curves[i][Stupid_2D_to_1D(table_x + 1, table_y + 0, gridsteps)];
-            val_y = curves[i][Stupid_2D_to_1D(table_x + 0, table_y + 1, gridsteps)];
-            valxy = curves[i][Stupid_2D_to_1D(table_x + 1, table_y + 1, gridsteps)];
-
-            // std::cout << val__ << " " << valx_ << " " << val_y << " " << valxy << std::endl;
-
-            double valA, valB;
-
-            valA = (1.0 - xfrac) * val__ + xfrac * valx_;
-            valB = (1.0 - xfrac) * val_y + xfrac * valxy;
-
-            double final_val = (1.0 - yfrac) * valA + yfrac * valB;
-            resolved_vals[i] = final_val;
-            // std::cout << final_val << std::endl;
-        }
-
-        // std::cout << q << "  " << omega << " - " << resolved_vals[0] << std::endl;
-    // }
-
-
-
-    double v00, v0z, vzz, vxx, vxy;
-    v00 = 2.0 * eps * eps_prim * ( 1 + k_prim/eps_prim * costheta );
-    v0z = omega / q * (m_l*m_l + v00) + m_l*m_l / q * (eps + eps_prim);
-    vzz = omega * omega / (q*q) * (m_l * m_l + v00) + m_l*m_l / (q * q) * (m_l * m_l + 2.0 * omega * (eps + eps_prim) + q*q);
-    vxx = Q_sq + Q_sq * (m_l * m_l + v00) / (2.0 * q * q) - m_l*m_l / (q * q) * (m_l*m_l / 2.0 + omega * (eps + eps_prim));
-    vxy = Q_sq * (eps + eps_prim) / q - m_l * m_l * omega / q;
-
-    double vxy_sign = -1.0; // If neutrino, I think it should be positive for antineutrinos
-    if (lepton_in.pdg < 0){
-        vxy_sign = 1.0;
-    }
-
-    double coefficients[] = {v00, v0z, vzz, vxx, vxy * vxy_sign};
-
-    xsec = 0.0;
-    for(int i = 0; i < 5; i++){
-        // std::cout << resolved_vals[i] << " ";
-        xsec += coefficients[i] * resolved_vals[i];
-    }
-    // std::cout << "  " << xsec << std::endl;
-
-    std::cout << q << " " << omega << " " << xsec << std::endl;
-
-    xsec *= fermi_constant * fermi_constant / (8. * PI * PI) * k_prim / eps;
+    bool is_anti = lepton_in.pdg < 0;
+    xsec = calc_xsec(q, omega, eps, m_l, is_anti);
 
 
     // xsec = jakobian * qel_sigma(Enu0, q2, kind, nu.pdg<0, lepton.mass(), N0.mass());
@@ -247,7 +157,11 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 
     xsec *= 10e-3; // To GeV?
 
-    // std::cout << "yippee" << std::endl;
+
+    // for (double w = 0.0; w < 1000.0; w += 1.0){
+    //     double val = calc_xsec(400.0, w, 600.0, 105.66, false);
+    //     std::cout << w << " " << val << std::endl;
+    // }
     // std::exit(0);
 
 
@@ -261,96 +175,100 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     return e.weight*cm2;
 }
 
-// double calc_xsec(double q, double omega, double eps){
-//     double eps_prim = eps - omega;//eps - omega;
-//     double omega = eps-eps_prim;
-//
-//     vect diff = lepton_in_rest-lepton_out_rest;
-//     double q = sqrt(diff.x * diff.x + diff.y*diff.y + diff.z*diff.z);
-//
-//     // double Q_sq = -q2;
-//     // double q = lepton_in-lepton
-//     // double q = sqrt(-q2);
-//     // double q = sqrt(Q_sq + omega * omega * 0.0);
-//
-//
-//     double k = eps;
-//     double k_prim = sqrt(eps_prim * eps_prim - m_l*m_l);
-//
-//     double Q_sq = q*q - omega * omega;
-//
-//
-//     double temp = (k*k + k_prim * k_prim - q*q) / (2.0 * k * k_prim);
-//     double costheta = temp;
-//     //  w/y
-//     //  ^  2  3 
-//     //  |  
-//     //  |  0  1
-//     //   -----> q/x
-//
-//     // for(double iterval = 0.0; iterval < 300.0; iterval += 1.0){
-//         int table_x, table_y;
-//         double xfrac, yfrac;
-//
-//         // q = 300;
-//         // omega = iterval;
-//
-//
-//         // std::cout << "q: " << q << " w: " << w << std::endl;
-//
-//         table_x = (int)floor(q/spacing);
-//         table_y = (int)floor(omega/spacing);
-//         xfrac = q/spacing - table_x;
-//         yfrac = omega/spacing - table_y;
-//
-//         // std::cout << "table_x: " << table_x << " table_y: " << table_y << std::endl;
-//
-//         // List of pointers to curves
-//         double *curves[] = {lfg_R00, lfg_R0z, lfg_Rzz, lfg_Rxx, lfg_Rxy};
-//         double resolved_vals[] = {0.0, 0.0, 0.0, 0.0, 0.0};
-//
-//         for(int i = 0; i < 5; i++){
-//             double val__, valx_, val_y, valxy;
-//
-//             val__ = curves[i][Stupid_2D_to_1D(table_x + 0, table_y + 0, gridsteps)];
-//             valx_ = curves[i][Stupid_2D_to_1D(table_x + 1, table_y + 0, gridsteps)];
-//             val_y = curves[i][Stupid_2D_to_1D(table_x + 0, table_y + 1, gridsteps)];
-//             valxy = curves[i][Stupid_2D_to_1D(table_x + 1, table_y + 1, gridsteps)];
-//
-//             // std::cout << val__ << " " << valx_ << " " << val_y << " " << valxy << std::endl;
-//
-//             double valA, valB;
-//
-//             valA = (1.0 - xfrac) * val__ + xfrac * valx_;
-//             valB = (1.0 - xfrac) * val_y + xfrac * valxy;
-//
-//             double final_val = (1.0 - yfrac) * valA + yfrac * valB;
-//             resolved_vals[i] = final_val;
-//             // std::cout << final_val << std::endl;
-//         }
-//
-//         // std::cout << q << "  " << omega << " - " << resolved_vals[0] << std::endl;
-//     // }
-//
-//
-//
-//     double v00, v0z, vzz, vxx, vxy;
-//     v00 = 2.0 * eps * eps_prim * ( 1 + k_prim/eps_prim * costheta );
-//     v0z = omega / q * (m_l*m_l + v00) + m_l*m_l / q * (eps + eps_prim);
-//     vzz = omega * omega / (q*q) * (m_l * m_l + v00) + m_l*m_l / (q * q) * (m_l * m_l + 2.0 * omega * (eps + eps_prim) + q*q);
-//     vxx = Q_sq + Q_sq * (m_l * m_l + v00) / (2.0 * q * q) - m_l*m_l / (q * q) * (m_l*m_l / 2.0 + omega * (eps + eps_prim));
-//     vxy = Q_sq * (eps + eps_prim) / q - m_l * m_l * omega / q;
-//
-//     double vxy_sign = -1.0; // If neutrino, I think it should be positive for antineutrinos
-//     if (lepton_in.pdg < 0){
-//         vxy_sign = 1.0;
-//     }
-//
-//     double coefficients[] = {v00, v0z, vzz, vxx, vxy * vxy_sign};
-//
-//     xsec = 0.0;
-//     for(int i = 0; i < 5; i++){
-//         // std::cout << resolved_vals[i] << " ";
-//         xsec += coefficients[i] * resolved_vals[i];
-//     }
-// }
+double calc_xsec(double q, double omega, double eps, double m_l, bool is_anti){
+    double spacing = 4.0;
+    int gridsteps = 300;
+    double fermi_constant = 1.1663787e-11;
+    double PI = 3.14159265359;
+
+
+    double eps_prim = eps - omega;
+
+
+
+
+    // double Q_sq = -q2;
+    // double q = lepton_in-lepton
+    // double q = sqrt(-q2);
+    // double q = sqrt(Q_sq + omega * omega * 0.0);
+
+
+    double k = eps; // Because neutrino mass is approx zero
+    // double k_prim = sqrt(lepton_out_rest.x * lepton_out_rest.x + lepton_out_rest.y * lepton_out_rest.y + lepton_out_rest.z * lepton_out_rest.z);
+    double k_prim = sqrt(eps_prim * eps_prim - m_l*m_l); // E^2 = k^2 + m^2 -> k^2 = E^2-m^2. Outgoing particle is muon (?), not massless
+
+    double Q_sq = q*q - omega*omega;
+
+    // std::cout << "q: " << q << " omega: " << omega << " k: " << k << " k_prim: " << k_prim << " eps: " << eps << " eps': " << eps_prim << std::endl;
+
+
+    // q = k - k'
+    // q^2 = kk - 2kk' + k'k'
+    // kk' = |k||k'|cos(theta)
+    // cos(theta) = (kk + k'k' - q^2) / (2|k||k'|)
+    double temp = (k*k + k_prim * k_prim - q*q) / (2.0 * k * k_prim);
+    double costheta = temp;
+
+
+
+    //  w/y
+    //  ^  2  3 
+    //  |  
+    //  |  0  1
+    //   -----> q/x
+
+    int table_x, table_y;
+    double xfrac, yfrac;
+
+    table_x = (int)floor(q/spacing);
+    table_y = (int)floor(omega/spacing);
+    xfrac = q/spacing - table_x;
+    yfrac = omega/spacing - table_y;
+
+    // List of pointers to curves
+    double *curves[] = {lfg_R00, lfg_R0z, lfg_Rzz, lfg_Rxx, lfg_Rxy};
+    double resolved_vals[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+    for(int i = 0; i < 5; i++){
+        double val__, valx_, val_y, valxy;
+
+        val__ = curves[i][Stupid_2D_to_1D(table_x + 0, table_y + 0, gridsteps)];
+        valx_ = curves[i][Stupid_2D_to_1D(table_x + 1, table_y + 0, gridsteps)];
+        val_y = curves[i][Stupid_2D_to_1D(table_x + 0, table_y + 1, gridsteps)];
+        valxy = curves[i][Stupid_2D_to_1D(table_x + 1, table_y + 1, gridsteps)];
+
+        double valA, valB;
+
+        valA = (1.0 - xfrac) * val__ + xfrac * valx_;
+        valB = (1.0 - xfrac) * val_y + xfrac * valxy;
+
+        double final_val = (1.0 - yfrac) * valA + yfrac * valB;
+        resolved_vals[i] = final_val;
+    }
+
+    double v00, v0z, vzz, vxx, vxy;
+    v00 = 2.0 * eps * eps_prim * ( 1 + k_prim/eps_prim * costheta );
+    v0z = omega / q * (m_l*m_l + v00) + m_l*m_l / q * (eps + eps_prim);
+    vzz = omega * omega / (q*q) * (m_l * m_l + v00) + m_l*m_l / (q * q) * (m_l * m_l + 2.0 * omega * (eps + eps_prim) + q*q);
+    vxx = Q_sq + Q_sq * (m_l * m_l + v00) / (2.0 * q * q) - m_l*m_l / (q * q) * (m_l*m_l / 2.0 + omega * (eps + eps_prim));
+    vxy = Q_sq * (eps + eps_prim) / q - m_l * m_l * omega / q;
+
+    double vxy_sign = -1.0; // If neutrino, I think it should be positive for antineutrinos
+    if (is_anti){
+        vxy_sign = 1.0;
+    }
+
+    double coefficients[] = {v00, v0z, vzz, vxx, vxy * vxy_sign};
+
+    double xsec = 0.0;
+    for(int i = 0; i < 5; i++){
+        xsec += coefficients[i] * resolved_vals[i];
+    }
+    // std::cout << "  " << xsec << std::endl;
+
+    // std::cout << q << " " << omega << " " << xsec << std::endl;
+
+    xsec *= fermi_constant * fermi_constant / (8. * PI * PI) * k_prim / eps;
+
+    return xsec;
+}
