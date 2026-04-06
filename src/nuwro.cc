@@ -308,10 +308,8 @@ void NuWro::makeevent(event* e, params &p)
 				if(p.sf_method>0)
 					sfevent (p, *e, *_nucleus); //MARKER
 				else {
-                    double abw = ab_initio_event(p, *e, *_nucleus, false);
 					// double qel_weight = qelevent1 (p, *e, *_nucleus, false); // MARKER qel cc
-                    // cout << "ab_weight: " << abw << " qel_weight: " << qel_weight << endl;
-                    // cout << "ab_weight: " << abw / qel_weight << endl;
+                    double abw = ab_initio_event(p, *e, *_nucleus, false);
                 }
 			}
 			break;

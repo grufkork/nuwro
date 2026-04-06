@@ -154,8 +154,20 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 
     // xsec = jakobian * qel_sigma(Enu0, q2, kind, nu.pdg<0, lepton.mass(), N0.mass());
     xsec *= jakobian;
-
     xsec *= 10e-3; // To GeV?
+
+
+    double xsec_old = jakobian * qel_sigma(eps, q2, kind, lepton_in.pdg<0, lepton_out.mass(), nucleon_in.mass());
+
+    double ratio = xsec / xsec_old;
+
+    // xsec = xsec_old;
+
+    // std::cout << ratio << " " << q << " " << omega << std::endl;
+
+    // AVKOMMENTERA FÖR ATT PRINTA RATIO
+    // std::cout << "Ratio: " << ratio << std::endl;
+
 
 
     // for (double w = 0.0; w < 1000.0; w += 1.0){
@@ -178,7 +190,6 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 double calc_xsec(double q, double omega, double eps, double m_l, bool is_anti){
     double spacing = 4.0;
     int gridsteps = 300;
-    double fermi_constant = 1.1663787e-11;
     double PI = 3.14159265359;
 
 
@@ -222,6 +233,7 @@ double calc_xsec(double q, double omega, double eps, double m_l, bool is_anti){
 
     table_x = (int)floor(q/spacing);
     table_y = (int)floor(omega/spacing);
+    // std::cout << table_x << " " << table_y << std::endl;
     xfrac = q/spacing - table_x;
     yfrac = omega/spacing - table_y;
 
@@ -268,7 +280,7 @@ double calc_xsec(double q, double omega, double eps, double m_l, bool is_anti){
 
     // std::cout << q << " " << omega << " " << xsec << std::endl;
 
-    xsec *= fermi_constant * fermi_constant / (8. * PI * PI) * k_prim / eps;
+    xsec *= G * G / (8. * PI * PI) * k_prim / eps;
 
     return xsec;
 }
