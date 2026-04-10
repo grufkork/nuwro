@@ -128,9 +128,9 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 
 
     vect lepton_in_rest = lepton_in;
-    lepton_in_rest.boost (-nucleon_in.v ());  // go to nucleon rest frame
+    // lepton_in_rest.boost (-nucleon_in.v ());  // go to nucleon rest frame
     vect lepton_out_rest = lepton_out;
-    lepton_out_rest.boost(-nucleon_in.v());
+    // lepton_out_rest.boost(-nucleon_in.v());
 
     // double Enu0 = lepton_in_rest.t;   // neutrino energy in target frame
 
@@ -176,6 +176,10 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     // }
     // std::exit(0);
 
+    if (xsec < 0.0){
+        e.weight = 0.0;
+        return 0.0;
+    }
 
 
     e.temp.push_back(lepton_out);
@@ -206,7 +210,8 @@ double calc_xsec(double q, double omega, double eps, double m_l, bool is_anti){
 
     double k = eps; // Because neutrino mass is approx zero
     // double k_prim = sqrt(lepton_out_rest.x * lepton_out_rest.x + lepton_out_rest.y * lepton_out_rest.y + lepton_out_rest.z * lepton_out_rest.z);
-    double k_prim = sqrt(eps_prim * eps_prim - m_l*m_l); // E^2 = k^2 + m^2 -> k^2 = E^2-m^2. Outgoing particle is muon (?), not massless
+    // double k_prim = sqrt(eps_prim * eps_prim - m_l*m_l); // E^2 = k^2 + m^2 -> k^2 = E^2-m^2. Outgoing particle is muon (?), not massless
+    double k_prim = eps_prim;
 
     double Q_sq = q*q - omega*omega;
 
@@ -234,6 +239,7 @@ double calc_xsec(double q, double omega, double eps, double m_l, bool is_anti){
     table_x = (int)floor(q/spacing);
     table_y = (int)floor(omega/spacing);
     // std::cout << table_x << " " << table_y << std::endl;
+    // std::cout << q << " " << omega << std::endl;
     xfrac = q/spacing - table_x;
     yfrac = omega/spacing - table_y;
 
@@ -270,11 +276,12 @@ double calc_xsec(double q, double omega, double eps, double m_l, bool is_anti){
         vxy_sign = 1.0;
     }
 
-    double coefficients[] = {v00, v0z, vzz, vxx, vxy * vxy_sign};
+    double coefficients[] = {v00, -v0z, vzz, vxx, vxy * vxy_sign};
 
     double xsec = 0.0;
     for(int i = 0; i < 5; i++){
         xsec += coefficients[i] * resolved_vals[i];
+        // xsec += resolved_vals[i];
     }
     // std::cout << "  " << xsec << std::endl;
 
