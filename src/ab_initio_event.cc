@@ -57,6 +57,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     lepton_out.r=nucleon_in.r;
 
     int kind=0; // 0 - cc //  1 - nc proton // 2 - nc neutron
+    // std::cout << " -- " << std::endl;
     if(nc)
     {
         lepton_out=lepton_in;
@@ -65,6 +66,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     }
     else if((lepton_in.pdg>0 && nucleon_in.pdg==PDG::pdg_proton) ||( lepton_in.pdg<0 && nucleon_in.pdg==PDG::pdg_neutron))
     {
+        // std::cout << "Invalid CC event: " << lepton_in << " " << nucleon_in << std::endl;
         return 0;
     }
     else
@@ -116,15 +118,27 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     double dlu=sqrt( (aa + vect(lepton_in))*(aa+vect(lepton_in)) );
     if (dlu<= (lepton_out.mass() + nucleon_out.mass() ) )
     {
+        std::cout << "Event kinematically forbidden: " << lepton_in << " " << nucleon_in << std::endl;
         e.weight=0;
         return 0;
+    }
+
+    double qwidth = 1100.0;
+    double q = qwidth * frandom();
+    // double wwidth = 1200.0;
+    double wwidth = qwidth;
+    double w = wwidth * frandom();
+
+    if (w > q){
+        e.weight = 0.0;
+        return 0.0;
     }
 
     // cross section (is 0 until the reaction occurs)
     double xsec = 0;
     double q2,jakobian;
 
-    q2 = czarek_kinematics2(_E_bind, lepton_in, nucleon_in, lepton_out, nucleon_out,jakobian);
+    // q2 = czarek_kinematics2(_E_bind, lepton_in, nucleon_in, lepton_out, nucleon_out,jakobian);
 
 
     vect lepton_in_rest = lepton_in;
@@ -137,29 +151,51 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     double m_l = lepton_out.mass();
 
     double eps = lepton_in_rest.t;
-    double eps_prim = lepton_out_rest.t;
-    double omega = eps-eps_prim;
+    double omega = w;
+    double eps_prim = eps - w;// - _E_bind;
+    // double omega = eps-eps_prim;
 
-    vect diff = lepton_in_rest-lepton_out_rest;
+
+    // vect diff = lepton_in_rest-lepton_out_rest;
 
     // Both below give same answer
     // Boosting/rest frame does not affect result
     // double q = sqrt(diff.x * diff.x + diff.y*diff.y + diff.z*diff.z);
-    double q = sqrt(-q2 + omega*omega); // From Q^2 = q^2 - w^2, -q2=Q^2
+    // double q = sqrt(-q2 + omega*omega); // From Q^2 = q^2 - w^2, -q2=Q^2
     // std::cout << q << " " << " " << " " << std::endl;
 
     bool is_anti = lepton_in.pdg < 0;
-    xsec = calc_xsec(q, omega, eps, m_l, is_anti);
+    xsec = calc_xsec(q, omega, eps, m_l, is_anti) * wwidth * qwidth;
+
+    lepton_out.t = eps_prim;
+
+    double q_initial = sqrt(eps*eps); // Massless
+    double q_final = q_initial - q;
+    // std::cout << q_final << std::endl;
+
+    // q^2 = 3 x^2
+    // x = sqrt(q^2/3)
+    double q_component_out = sqrt(q_final*q_final/3.0);
+    // q_component_out = ;
+    lepton_out.x = 0.0;
+    lepton_out.y = 0.0;
+    lepton_out.z = q_final;
+    // lepton_out.x = q_component_out;
+    // lepton_out.y = q_component_out;
+    // lepton_out.z = q_component_out;
+
+    // std::cout << "q: " << q << " omega: " << omega << " eps: " << eps << " m_l: " << m_l << " xsec: " << xsec << std::endl;
 
 
     // xsec = jakobian * qel_sigma(Enu0, q2, kind, nu.pdg<0, lepton.mass(), N0.mass());
-    xsec *= jakobian;
+    // xsec *= jakobian;
     xsec *= 10e-3; // To GeV?
 
 
-    double xsec_old = jakobian * qel_sigma(eps, q2, kind, lepton_in.pdg<0, lepton_out.mass(), nucleon_in.mass());
+    // double xsec_old = jakobian * qel_sigma(eps, q2, kind, lepton_in.pdg<0, lepton_out.mass(), nucleon_in.mass());
+    // xsec = xsec_old;
 
-    double ratio = xsec / xsec_old;
+    // double ratio = xsec / xsec_old;
 
     // xsec = xsec_old;
 
@@ -187,6 +223,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     e.out.push_back(lepton_out);
     e.out.push_back(nucleon_out);
     e.weight=xsec/cm2;
+    // std::cout << "accepted" << std::endl;
 
     return e.weight*cm2;
 }
