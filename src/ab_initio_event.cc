@@ -123,49 +123,46 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         return 0;
     }
 
-    double qwidth = 1100.0;
-    double q = qwidth * frandom();
-    // double wwidth = 1200.0;
-    double wwidth = qwidth;
-    double w = wwidth * frandom();
+    double coswidth = 1.0;
+    double costheta = coswidth * frandom();
+
+
+    double eps = lepton_in.t;
+    double k = eps; // Because neutrino mass is approx zero
+
+    double wwidth = 1200.0;
+    double q, w, eps_prim, k_prim;
+    int n = 0;
+    do{
+        w = wwidth * frandom();
+        eps_prim = eps - w + _E_bind;
+        k_prim = eps_prim;
+        q = sqrt(-(costheta * 2.0 * k * k_prim - k*k - k_prim*k_prim));
+        if ( w > q){
+            // std::cout << "draw fail" << std::endl;
+            e.weight = 0.0;
+            return 0.0;
+        }
+        if (n > 0){
+            std::cout << "redraw" << std::endl;
+        }
+        n ++;
+    }while(w > q);
 
     if (w > q){
         e.weight = 0.0;
         return 0.0;
     }
 
-    // cross section (is 0 until the reaction occurs)
     double xsec = 0;
-    double q2,jakobian;
 
-    // q2 = czarek_kinematics2(_E_bind, lepton_in, nucleon_in, lepton_out, nucleon_out,jakobian);
-
-
-    vect lepton_in_rest = lepton_in;
-    // lepton_in_rest.boost (-nucleon_in.v ());  // go to nucleon rest frame
-    vect lepton_out_rest = lepton_out;
-    // lepton_out_rest.boost(-nucleon_in.v());
-
-    // double Enu0 = lepton_in_rest.t;   // neutrino energy in target frame
 
     double m_l = lepton_out.mass();
 
-    double eps = lepton_in_rest.t;
     double omega = w;
-    double eps_prim = eps - w;// - _E_bind;
-    // double omega = eps-eps_prim;
-
-
-    // vect diff = lepton_in_rest-lepton_out_rest;
-
-    // Both below give same answer
-    // Boosting/rest frame does not affect result
-    // double q = sqrt(diff.x * diff.x + diff.y*diff.y + diff.z*diff.z);
-    // double q = sqrt(-q2 + omega*omega); // From Q^2 = q^2 - w^2, -q2=Q^2
-    // std::cout << q << " " << " " << " " << std::endl;
 
     bool is_anti = lepton_in.pdg < 0;
-    xsec = calc_xsec(q, omega, eps, m_l, is_anti) * wwidth * qwidth;
+    xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti) * wwidth * coswidth;// * sin(acos(costheta));
 
     lepton_out.t = eps_prim;
 
@@ -184,33 +181,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     // lepton_out.y = q_component_out;
     // lepton_out.z = q_component_out;
 
-    // std::cout << "q: " << q << " omega: " << omega << " eps: " << eps << " m_l: " << m_l << " xsec: " << xsec << std::endl;
-
-
-    // xsec = jakobian * qel_sigma(Enu0, q2, kind, nu.pdg<0, lepton.mass(), N0.mass());
-    // xsec *= jakobian;
-    xsec *= 10e-3; // To GeV?
-
-
-    // double xsec_old = jakobian * qel_sigma(eps, q2, kind, lepton_in.pdg<0, lepton_out.mass(), nucleon_in.mass());
-    // xsec = xsec_old;
-
-    // double ratio = xsec / xsec_old;
-
-    // xsec = xsec_old;
-
-    // std::cout << ratio << " " << q << " " << omega << std::endl;
-
-    // AVKOMMENTERA FÖR ATT PRINTA RATIO
-    // std::cout << "Ratio: " << ratio << std::endl;
-
-
-
-    // for (double w = 0.0; w < 1000.0; w += 1.0){
-    //     double val = calc_xsec(400.0, w, 600.0, 105.66, false);
-    //     std::cout << w << " " << val << std::endl;
-    // }
-    // std::exit(0);
+    // xsec *= 10e-3; // To GeV?
 
     if (xsec < 0.0){
         e.weight = 0.0;
@@ -228,28 +199,17 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     return e.weight*cm2;
 }
 
-double calc_xsec(double q, double omega, double eps, double m_l, bool is_anti){
+double calc_xsec(double costheta, double q, double omega, double k, double k_prim, double eps, double eps_prim, double m_l, bool is_anti){
     double spacing = 4.0;
     int gridsteps = 300;
     double PI = 3.14159265359;
 
 
-    double eps_prim = eps - omega;
 
 
 
 
     // double Q_sq = -q2;
-    // double q = lepton_in-lepton
-    // double q = sqrt(-q2);
-    // double q = sqrt(Q_sq + omega * omega * 0.0);
-
-
-    double k = eps; // Because neutrino mass is approx zero
-    // double k_prim = sqrt(lepton_out_rest.x * lepton_out_rest.x + lepton_out_rest.y * lepton_out_rest.y + lepton_out_rest.z * lepton_out_rest.z);
-    // double k_prim = sqrt(eps_prim * eps_prim - m_l*m_l); // E^2 = k^2 + m^2 -> k^2 = E^2-m^2. Outgoing particle is muon (?), not massless
-    double k_prim = eps_prim;
-
     double Q_sq = q*q - omega*omega;
 
     // std::cout << "q: " << q << " omega: " << omega << " k: " << k << " k_prim: " << k_prim << " eps: " << eps << " eps': " << eps_prim << std::endl;
@@ -259,8 +219,10 @@ double calc_xsec(double q, double omega, double eps, double m_l, bool is_anti){
     // q^2 = kk - 2kk' + k'k'
     // kk' = |k||k'|cos(theta)
     // cos(theta) = (kk + k'k' - q^2) / (2|k||k'|)
-    double temp = (k*k + k_prim * k_prim - q*q) / (2.0 * k * k_prim);
-    double costheta = temp;
+    // double temp = (k*k + k_prim * k_prim - q*q) / (2.0 * k * k_prim);
+    // -> costheta * 2 * k * k_prim - k * k - k_prim * k_prim = q^2
+    // double costheta = temp;
+
 
 
 
