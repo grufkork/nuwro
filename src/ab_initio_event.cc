@@ -1,3 +1,4 @@
+#include "generatormt.h"
 #include "jednostki.h"
 #include "kinsolver.h"
 #include <cassert>
@@ -123,46 +124,46 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         return 0;
     }
 
-    double coswidth = 1.0;
-    double costheta = coswidth * frandom();
+    double m_l = lepton_out.mass();
+
+    double coswidth = 2.0;
+    // double cosval = coswidth * frandom();
+    double costheta = coswidth * frandom() - 1.0;
 
 
     double eps = lepton_in.t;
     double k = eps; // Because neutrino mass is approx zero
 
-    double wwidth = 1200.0;
-    double q, w, eps_prim, k_prim;
-    int n = 0;
-    do{
-        w = wwidth * frandom();
-        eps_prim = eps - w + _E_bind;
-        k_prim = eps_prim;
-        q = sqrt(-(costheta * 2.0 * k * k_prim - k*k - k_prim*k_prim));
-        if ( w > q){
-            // std::cout << "draw fail" << std::endl;
-            e.weight = 0.0;
-            return 0.0;
-        }
-        if (n > 0){
-            std::cout << "redraw" << std::endl;
-        }
-        n ++;
-    }while(w > q);
+    double eps_prim_min = m_l;
+    double eps_prim_max = eps - _E_bind;
 
-    if (w > q){
+    double w_min = eps-eps_prim_max;
+    double w_max = eps-eps_prim_min;
+
+    // double wwidth = 1200.0;
+    double wwidth = w_max - w_min;
+
+    double w = wwidth * frandom() + w_min;
+    double eps_prim = eps - (w);
+    double k_prim = sqrt(eps_prim*eps_prim - m_l*m_l);
+    double q = sqrt(-(costheta * 2.0 * k * k_prim - k*k - k_prim*k_prim));
+
+    if ( _E_bind > w){
+        std::cout << "aaaah" << std::endl;
+        std::exit(0);
+    }
+
+    if ( w > q) {
+        // std::cout << "draw fail" << std::endl;
         e.weight = 0.0;
         return 0.0;
     }
 
     double xsec = 0;
-
-
-    double m_l = lepton_out.mass();
-
     double omega = w;
-
     bool is_anti = lepton_in.pdg < 0;
-    xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti) * wwidth * coswidth;// * sin(acos(costheta));
+
+    xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti) * wwidth * coswidth * 2.0 * Pi;// * sin(acos(costheta));
 
     lepton_out.t = eps_prim;
 
