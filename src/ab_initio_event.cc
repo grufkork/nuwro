@@ -111,7 +111,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         }
     }
 
-    // _E_bind = 0.0;
+    // _E_bind = 34.0;
 
     vect aa;
     aa = vect (nucleon_in);
@@ -145,7 +145,8 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 
     double w = wwidth * frandom() + w_min;
     double eps_prim = eps - (w);
-    double k_prim = sqrt(eps_prim*eps_prim - m_l*m_l);
+    double k_prim = sqrt((eps_prim-_E_bind)*(eps_prim-_E_bind)- m_l*m_l);
+    // double k_prim = sqrt(eps_prim*eps_prim - m_l*m_l);
     double q = sqrt(-(costheta * 2.0 * k * k_prim - k*k - k_prim*k_prim));
 
     if ( _E_bind > w){
@@ -163,7 +164,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     double omega = w;
     bool is_anti = lepton_in.pdg < 0;
 
-    xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti) * wwidth * coswidth * 2.0 * Pi;// * sin(acos(costheta));
+    xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti, _E_bind) * wwidth * coswidth;// * 2.0 * Pi;// * sin(acos(costheta));
 
     lepton_out.t = eps_prim;
 
@@ -197,16 +198,18 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     e.weight=xsec/cm2;
     // std::cout << "accepted" << std::endl;
 
-    return e.weight*cm2;
+
+
+    return e.weight; // *cm2;
 }
 
-double calc_xsec(double costheta, double q, double omega, double k, double k_prim, double eps, double eps_prim, double m_l, bool is_anti){
+double calc_xsec(double costheta, double q, double omega, double k, double k_prim, double eps, double eps_prim, double m_l, bool is_anti, double _E_bind){
     double spacing = 4.0;
     int gridsteps = 300;
     double PI = 3.14159265359;
 
 
-
+    eps_prim -= _E_bind;
 
 
 
@@ -237,11 +240,11 @@ double calc_xsec(double costheta, double q, double omega, double k, double k_pri
     double xfrac, yfrac;
 
     table_x = (int)floor(q/spacing);
-    table_y = (int)floor(omega/spacing);
+    table_y = (int)floor((omega- _E_bind)/spacing);
     // std::cout << table_x << " " << table_y << std::endl;
     // std::cout << q << " " << omega << std::endl;
     xfrac = q/spacing - table_x;
-    yfrac = omega/spacing - table_y;
+    yfrac = (omega - _E_bind) /spacing - table_y;
 
     // List of pointers to curves
     double *curves[] = {lfg_R00, lfg_R0z, lfg_Rzz, lfg_Rxx, lfg_Rxy};
@@ -273,7 +276,7 @@ double calc_xsec(double costheta, double q, double omega, double k, double k_pri
 
     double vxy_sign = -1.0; // If neutrino, I think it should be positive for antineutrinos
     if (is_anti){
-        vxy_sign = 1.0;
+        vxy_sign *= -1.0;
     }
 
     double coefficients[] = {v00, -v0z, vzz, vxx, vxy * vxy_sign};
