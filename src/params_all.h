@@ -54,6 +54,7 @@ PARAM(bool,dyn_coh_nc,0)\
 PARAM(bool,dyn_mec_cc,1)\
 PARAM(bool,dyn_mec_nc,0)\
 PARAM(bool,dyn_hyp_cc,1)\
+PARAM(bool,dyn_qel_ab,1)\
 PARAM(bool,dyn_lep,1)\
 PARAM(bool,dyn_qel_el,0)\
 PARAM(bool,dyn_res_el,0)\

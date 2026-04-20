@@ -99,6 +99,7 @@ dyn_mec_cc =0      // Meson exchange charged current
 dyn_mec_nc =0      // Meson exchange neutral current
 dyn_hyp_cc =0      // Quasi elastic hyperon production
 dyn_lep    =1      // Neutrino-electron
+dyn_qel_ab =1      // New QEL CC implementation
 # Standard output of total sigma [cm^2 / nucleon]
 
 dyn_qel_el =0      // (Quasi) elastic electron scattering

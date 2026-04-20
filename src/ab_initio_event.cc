@@ -111,7 +111,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         }
     }
 
-    // _E_bind = 34.0;
+    _E_bind = 0.0;
 
     vect aa;
     aa = vect (nucleon_in);

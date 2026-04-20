@@ -308,11 +308,51 @@ void NuWro::makeevent(event* e, params &p)
 				if(p.sf_method>0)
 					sfevent (p, *e, *_nucleus); //MARKER
 				else {
-					// double qel_weight = qelevent1 (p, *e, *_nucleus, false); // MARKER qel cc
-                    double abw = ab_initio_event(p, *e, *_nucleus, false);
+                    ab_initio_event(p, *e, *_nucleus, false);
+                    // qelevent1 (p, *e, *_nucleus, false); // MARKER qel cc
+
+                    // if(false){
+                    //     std::ofstream outfile("weights.txt", std::ios_base::app);
+                    //     if (outfile.is_open())
+                    //     {
+                    //         // outfile << abw << std::endl;
+                    //         outfile.close();
+                    //     }
+                    //     else
+                    //     {
+                    //         std::cerr << "Unable to open file weights.txt" << std::endl;
+                    //     }
+                    //     outfile.close();
+                    // }
                 }
 			}
 			break;
+        case 15:
+			e->flag.qel=e->flag.cc=true;
+			if (p.dyn_qel_cc) // qel cc
+			{
+				if(p.sf_method>0)
+					sfevent (p, *e, *_nucleus); //MARKER
+				else {
+                    ab_initio_event(p, *e, *_nucleus, false);
+                    // qelevent1 (p, *e, *_nucleus, false); // MARKER qel cc
+
+                    // if(false){
+                    //     std::ofstream outfile("weights.txt", std::ios_base::app);
+                    //     if (outfile.is_open())
+                    //     {
+                    //         // outfile << abw << std::endl;
+                    //         outfile.close();
+                    //     }
+                    //     else
+                    //     {
+                    //         std::cerr << "Unable to open file weights.txt" << std::endl;
+                    //     }
+                    //     outfile.close();
+                    // }
+                }
+			}
+            break;
 		case 1:
 			e->flag.qel=e->flag.nc=true;
 			if (p.dyn_qel_nc) // qel nc

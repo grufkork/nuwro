@@ -121,6 +121,7 @@ inline void chooser::reset(params &p)
     if(p.dyn_lep   ) proc.push_back(Dyn(12,"LEP"  ));
     if(p.dyn_qel_el) proc.push_back(Dyn(20,"QELel"));
     if(p.dyn_res_el) proc.push_back(Dyn(21,"RESel"));
+    if(p.dyn_qel_ab) proc.push_back(Dyn(15, "QELab"));
     N=proc.size();
     do_distrib();
     if(proc[N-1].Wacc==0)

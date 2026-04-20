@@ -24,7 +24,7 @@ class Analyser1 : public Analyser {
   /// construct the Analyser
   Analyser1(params &p0) : Analyser(p0), mafit("ma_fit.txt"), matables("ma_tables.txt"), boon(new boone) {
     ndyn = p0.dyn_qel_cc + p0.dyn_qel_nc + p0.dyn_res_cc + p0.dyn_res_nc + p0.dyn_dis_cc + p0.dyn_dis_nc +
-           p0.dyn_coh_cc + p0.dyn_coh_nc + p0.dyn_mec_cc + p0.dyn_mec_nc;
+           p0.dyn_coh_cc + p0.dyn_coh_nc + p0.dyn_mec_cc + p0.dyn_mec_nc + p0.dyn_qel_ab;
     stringstream in(p.user_params.c_str());
     in >> ma_lo >> ma_hi >> ma_step;
 
