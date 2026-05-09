@@ -119,7 +119,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     double dlu=sqrt( (aa + vect(lepton_in))*(aa+vect(lepton_in)) );
     if (dlu<= (lepton_out.mass() + nucleon_out.mass() ) )
     {
-        std::cout << "Event kinematically forbidden: " << lepton_in << " " << nucleon_in << std::endl;
+        // std::cout << "Event kinematically forbidden: " << lepton_in << " " << nucleon_in << std::endl;
         e.weight=0;
         return 0;
     }
@@ -149,13 +149,23 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     // double k_prim = sqrt(eps_prim*eps_prim - m_l*m_l);
     double q = sqrt(-(costheta * 2.0 * k * k_prim - k*k - k_prim*k_prim));
 
+    double xfade_point = 400.0;
+    double xfade_width = 0.0;
+    double crossfade = 1.0 - max(0.0, min(1.0, (q - xfade_point) / xfade_width));
+    // crossfade = 1.0;
+
+    if (crossfade == 0.0){
+        e.weight = 0.0;
+        return 0.0;
+    }
+
     if ( _E_bind > w){
         std::cout << "aaaah" << std::endl;
         std::exit(0);
     }
 
     if ( w > q) {
-        // std::cout << "draw fail" << std::endl;
+        std::cout << "draw fail" << std::endl;
         e.weight = 0.0;
         return 0.0;
     }
@@ -195,7 +205,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     e.temp.push_back(nucleon_out);
     e.out.push_back(lepton_out);
     e.out.push_back(nucleon_out);
-    e.weight=xsec/cm2;
+    e.weight=xsec/cm2 * crossfade;
     // std::cout << "accepted" << std::endl;
 
 

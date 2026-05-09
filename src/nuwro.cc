@@ -241,7 +241,7 @@ void NuWro::makeevent(event* e, params &p)
 	else
 		_nucleus->reset();
 	e->in.push_back (nu);		 // insert neutrino
-	if(dyn<6 || (dyn>=10 && dyn<12) || dyn==20)
+	if(dyn<6 || (dyn>=10 && dyn<12) || dyn==20 || dyn==15)
 	{
 								 // insert target nucleon
 		e->in.push_back (_nucleus->get_nucleon());
@@ -308,8 +308,7 @@ void NuWro::makeevent(event* e, params &p)
 				if(p.sf_method>0)
 					sfevent (p, *e, *_nucleus); //MARKER
 				else {
-                    ab_initio_event(p, *e, *_nucleus, false);
-                    // qelevent1 (p, *e, *_nucleus, false); // MARKER qel cc
+                    qelevent1 (p, *e, *_nucleus, false);
 
                     // if(false){
                     //     std::ofstream outfile("weights.txt", std::ios_base::app);
@@ -335,7 +334,6 @@ void NuWro::makeevent(event* e, params &p)
 					sfevent (p, *e, *_nucleus); //MARKER
 				else {
                     ab_initio_event(p, *e, *_nucleus, false);
-                    // qelevent1 (p, *e, *_nucleus, false); // MARKER qel cc
 
                     // if(false){
                     //     std::ofstream outfile("weights.txt", std::ios_base::app);

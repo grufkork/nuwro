@@ -87,6 +87,8 @@ double qelevent1(params&p, event & e, nucleus &t,bool nc)
     }
   }
 
+  // _E_bind = 0.0;
+
   vect aa;
   aa = vect (N0);
   aa.t-=_E_bind;
@@ -112,6 +114,24 @@ double qelevent1(params&p, event & e, nucleus &t,bool nc)
   nu4.boost (-N0.v ());  // go to nucleon rest frame
   double Enu0 = nu4.t;   // neutrino energy in target frame
   xsec = jakobian * qel_sigma(Enu0, q2, kind, nu.pdg<0, lepton.mass(), N0.mass());
+
+  vect diff = nu - N0;
+  double q = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
+  double xfade_point = 400.0;
+  double xfade_width = 0.0;
+  double crossfade = max(0.0, min(1.0, (q - xfade_point) / xfade_width));
+  // crossfade = 0.0;
+
+  if (crossfade == 0.0){
+    e.weight = 0.0;
+    return 0.0;
+  }
+
+
+  // if (q <= 400.0){
+  //     e.weight = 0.0;
+  //     return 0.0;
+  // }
 
   /*
   /////////////////////////////////////////////////////////
