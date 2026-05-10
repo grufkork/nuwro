@@ -117,7 +117,7 @@ double qelevent1(params&p, event & e, nucleus &t,bool nc)
 
   vect diff = nu - N0;
   double q = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
-  double xfade_point = 400.0;
+  double xfade_point = 0.0;
   double xfade_width = 0.0;
   double crossfade = max(0.0, min(1.0, (q - xfade_point) / xfade_width));
   // crossfade = 0.0;
