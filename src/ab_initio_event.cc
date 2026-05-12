@@ -111,7 +111,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         }
     }
 
-    _E_bind = 0.0;
+    // _E_bind = 0.0;
 
     vect aa;
     aa = vect (nucleon_in);
@@ -152,7 +152,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     double xfade_point = 400.0;
     double xfade_width = 0.0;
     double crossfade = 1.0 - max(0.0, min(1.0, (q - xfade_point) / xfade_width));
-    // crossfade = 1.0;
+    // crossfade = 0.0;
 
     if (crossfade == 0.0){
         e.weight = 0.0;
@@ -185,10 +185,17 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     // q^2 = 3 x^2
     // x = sqrt(q^2/3)
     double q_component_out = sqrt(q_final*q_final/3.0);
-    // q_component_out = ;
-    lepton_out.x = 0.0;
+    double sintheta_sq = 1.0 - costheta*costheta;
+
+
+    // Solution to 
+    // - |k-k'|^2 = q
+    // - x/z = tan(theta)
+    double mom_out = eps * costheta + sqrt(q*q - eps*eps * sintheta_sq);
+    lepton_out.x = mom_out * sqrt(sintheta_sq);
     lepton_out.y = 0.0;
-    lepton_out.z = q_final;
+    lepton_out.z = mom_out * costheta;
+
     // lepton_out.x = q_component_out;
     // lepton_out.y = q_component_out;
     // lepton_out.z = q_component_out;
