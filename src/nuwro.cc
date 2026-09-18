@@ -7,6 +7,7 @@
 #include "TFile.h"
 #include "TH1.h"
 #include "qelevent.h"
+#include "ab_initio_event.h"
 #include "e_el_event.h"
 #include "e_spp_event.h"
 #include "hypevent.h"
@@ -439,6 +440,19 @@ void NuWro::makeevent(event* e, params &p)
 				hypevent (p, *e, *_nucleus);
 			}
 			break;
+        case 11:
+			e->flag.qel=e->flag.cc=true;
+			if (p.dyn_qel_ab) // qel cc
+			{
+				if(p.sf_method>0) {
+					sfevent (p, *e, *_nucleus);
+                    std::cout<<"Warning: SF is not implemented for QELab. Using standard sfevent."<<std::endl;
+                } else {
+                    ab_initio_event(p, *e, *_nucleus, false);
+                }
+			}
+			break;
+
 		case 12:
 			e->flag.lep=true; //->flag.cc=true;
 			if (p.dyn_lep) // Neutrino-lepton

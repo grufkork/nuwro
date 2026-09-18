@@ -84,6 +84,7 @@ pauli_blocking   = 1 // enable (1) or not (0) Pauli blocking
 
 dyn_qel_cc =1      // Quasi elastic charged current
 dyn_qel_nc =0      // Quasi elastic neutral current
+dyn_qel_ab =0      // QEL CC from NRF tables
 dyn_res_cc =1      // Resonant charged current
 dyn_res_nc =0      // Resonant neutral current
 dyn_dis_cc =1      // Deep inelastic charged current

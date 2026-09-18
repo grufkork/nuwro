@@ -118,6 +118,7 @@ inline void chooser::reset(params &p)
     if(p.dyn_mec_cc) proc.push_back(Dyn(8,"MECcc"));
     if(p.dyn_mec_nc) proc.push_back(Dyn(9,"MECnc"));
     if(p.dyn_hyp_cc) proc.push_back(Dyn(10,"HYPcc"));
+    if(p.dyn_qel_ab) proc.push_back(Dyn(11,"QELab"));
     if(p.dyn_lep   ) proc.push_back(Dyn(12,"LEP"  ));
     if(p.dyn_qel_el) proc.push_back(Dyn(20,"QELel"));
     if(p.dyn_res_el) proc.push_back(Dyn(21,"RESel"));
