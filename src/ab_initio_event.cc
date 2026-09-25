@@ -151,29 +151,16 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 
     xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti) * wwidth * coswidth;// * 2.0 * Pi;// * sin(acos(costheta));
 
-    lepton_out.t = eps_prim;
 
-    double q_initial = sqrt(eps*eps); // Massless
-    double q_final = q_initial - q;
     // std::cout << q_final << std::endl;
 
-    // q^2 = 3 x^2
-    // x = sqrt(q^2/3)
-    double q_component_out = sqrt(q_final*q_final/3.0);
-    double sintheta_sq = 1.0 - costheta*costheta;
+    double momentum_perpendicular = sqrt(1-costheta*costheta) * k_prim;
+    double azimuth = 2.0 * M_PI * frandom();
 
-
-    // Solution to 
-    // - |k-k'|^2 = q
-    // - x/z = tan(theta)
-    double mom_out = eps * costheta + sqrt(q*q - eps*eps * sintheta_sq);
-    lepton_out.x = mom_out * sqrt(sintheta_sq);
-    lepton_out.y = 0.0;
-    lepton_out.z = mom_out * costheta;
-
-    // lepton_out.x = q_component_out;
-    // lepton_out.y = q_component_out;
-    // lepton_out.z = q_component_out;
+    lepton_out.t = eps_prim;
+    lepton_out.x = momentum_perpendicular * cos(azimuth);
+    lepton_out.y = momentum_perpendicular * sin(azimuth);
+    lepton_out.z = k_prim * costheta;
 
     // xsec *= 10e-3; // To GeV?
 
