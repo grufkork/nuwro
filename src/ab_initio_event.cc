@@ -65,6 +65,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         nucleon_out=nucleon_in;
         kind=(nucleon_in.pdg==pdg_proton?1:2);
     }
+    // (anti)Neutrinos interact only with (protons)neutrons. This needs to be compensated for
     else if((lepton_in.pdg>0 && nucleon_in.pdg==PDG::pdg_proton) ||( lepton_in.pdg<0 && nucleon_in.pdg==PDG::pdg_neutron))
     {
         // std::cout << "Invalid CC event: " << lepton_in << " " << nucleon_in << std::endl;
@@ -151,6 +152,8 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 
     xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti) * wwidth * coswidth;// * 2.0 * Pi;// * sin(acos(costheta));
 
+    // double active_nucleon_compensation = (double)((is_anti)?t.p:t.n) / (double)t.A();
+    // xsec /= active_nucleon_compensation;
 
     // std::cout << q_final << std::endl;
 

@@ -113,6 +113,20 @@ double qelevent1(params&p, event & e, nucleus &t,bool nc)
   double Enu0 = nu4.t;   // neutrino energy in target frame
   xsec = jakobian * qel_sigma(Enu0, q2, kind, nu.pdg<0, lepton.mass(), N0.mass());
 
+  
+  // MODEL MIXING
+  vect diff = N1 - N0;
+  double q = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
+  double xfade_point = 400.0;
+  double xfade_width = 0.0;
+  double crossfade = max(0.0, min(1.0, (q - xfade_point) / xfade_width));
+
+  if (crossfade == 0.0 || q <= xfade_point){
+    e.weight = 0.0;
+    return 0.0;
+  }
+  // MODEL MIXING END
+
   /*
   /////////////////////////////////////////////////////////
   // Aligarh Model for QEL (includes second class current)
