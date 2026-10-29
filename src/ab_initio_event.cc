@@ -57,13 +57,13 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     nucleon_out.r=nucleon_in.r; // 4-position? at time of event
     lepton_out.r=nucleon_in.r;
 
-    int kind=0; // 0 - cc //  1 - nc proton // 2 - nc neutron
+    // int kind=0; // 0 - cc //  1 - nc proton // 2 - nc neutron
     // std::cout << " -- " << std::endl;
     if(nc)
     {
         lepton_out=lepton_in;
         nucleon_out=nucleon_in;
-        kind=(nucleon_in.pdg==pdg_proton?1:2);
+        // kind=(nucleon_in.pdg==pdg_proton?1:2);
     }
     // (anti)Neutrinos interact only with (protons)neutrons. This needs to be compensated for
     else if((lepton_in.pdg>0 && nucleon_in.pdg==PDG::pdg_proton) ||( lepton_in.pdg<0 && nucleon_in.pdg==PDG::pdg_neutron))
@@ -76,34 +76,26 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         lepton_out.pdg=lepton_in.pdg-(lepton_in.pdg>0 ? 1 :-1);
         lepton_out.set_mass(PDG::mass(lepton_out.pdg));
         nucleon_out.pdg=(lepton_in.pdg>0 ? PDG::pdg_proton : PDG::pdg_neutron);//zmiana JN
-        switch(p.qel_rpa)
-        {
-            case 2:
-            case 3:
-                nucleon_in.set_mass(t.Mf());
-                nucleon_out.set_mass(t.Mf());
-                break;
-            default:
-                nucleon_out.set_mass(PDG::mass(nucleon_out.pdg));
-                break;
-        }
+        nucleon_out.set_mass(PDG::mass(nucleon_out.pdg));
+        // switch(p.qel_rpa)
+        // {
+        //     case 2:
+        //     case 3:
+        //         nucleon_in.set_mass(t.Mf());
+        //         nucleon_out.set_mass(t.Mf());
+        //         break;
+        //     default:
+        //         nucleon_out.set_mass(PDG::mass(nucleon_out.pdg));
+        //         break;
+        // }
     }
 
-    if (lepton_in.pdg==11 && nucleon_in.pdg==pdg_proton)
-        kind=10;
-    if (lepton_in.pdg==11 && nucleon_in.pdg==pdg_neutron)
-        kind=11;//will be used when FF are selected in the file ff.cc
+    // if (lepton_in.pdg==11 && nucleon_in.pdg==pdg_proton)
+    //     kind=10;
+    // if (lepton_in.pdg==11 && nucleon_in.pdg==pdg_neutron)
+    //     kind=11;//will be used when FF are selected in the file ff.cc
 
 
-    vect aa;
-    aa = vect (nucleon_in);
-    double dlu=sqrt( (aa + vect(lepton_in))*(aa+vect(lepton_in)) );
-    if (dlu<= (lepton_out.mass() + nucleon_out.mass() ) )
-    {
-        // std::cout << "Event kinematically forbidden: " << lepton_in << " " << nucleon_in << std::endl;
-        e.weight=0;
-        return 0;
-    }
 
     double m_l = lepton_out.mass();
 
@@ -150,6 +142,11 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     double omega = w;
     bool is_anti = lepton_in.pdg < 0;
 
+    if(w > 1100.0 || q > 1100.0){ // Outside the array
+        e.weight = 0.0;
+        return 0.0;
+    }
+
     xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti) * wwidth * coswidth;// * 2.0 * Pi;// * sin(acos(costheta));
 
     // double active_nucleon_compensation = (double)((is_anti)?t.p:t.n) / (double)t.A();
@@ -167,10 +164,21 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 
     // xsec *= 10e-3; // To GeV?
 
-    if (xsec < 0.0){
+    if (xsec <= 0.0){
         e.weight = 0.0;
         return 0.0;
     }
+
+    vect aa;
+    aa = vect (nucleon_in);
+    double dlu=sqrt( (aa + vect(lepton_in))*(aa+vect(lepton_in)) );
+    if (dlu<= (lepton_out.mass() + nucleon_out.mass() ) )
+    {
+        // std::cout << "Event kinematically forbidden: " << lepton_in << " " << nucleon_in << std::endl;
+        e.weight=0;
+        return 0;
+    }
+    // std::cout << "Event OK " << std::endl;
 
 
     e.temp.push_back(lepton_out);
