@@ -24,11 +24,11 @@
 #include "hyperon_interaction.h"
 
 #include "ab_initio_event.h"
-#include "ab_initio_data/lfg_R00.h"
-#include "ab_initio_data/lfg_R0z.h"
-#include "ab_initio_data/lfg_Rxx.h"
-#include "ab_initio_data/lfg_Rxy.h"
-#include "ab_initio_data/lfg_Rzz.h"
+
+#include "electron_nrfs.h"
+// Pick one of the below neutrino NRF sets to load
+#include "neutrino_nrfs.h" // Ab initio
+// #include "neutrino_lfg_O16_nrfs.h" // LFG
 
 
 int Stupid_2D_to_1D(int n, int m, int N){
@@ -65,7 +65,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         nucleon_out=nucleon_in;
         // kind=(nucleon_in.pdg==pdg_proton?1:2);
     }
-    // (anti)Neutrinos interact only with (protons)neutrons. This needs to be compensated for
+
     else if((lepton_in.pdg>0 && nucleon_in.pdg==PDG::pdg_proton) ||( lepton_in.pdg<0 && nucleon_in.pdg==PDG::pdg_neutron))
     {
         // std::cout << "Invalid CC event: " << lepton_in << " " << nucleon_in << std::endl;
@@ -99,21 +99,22 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
 
     double m_l = lepton_out.mass();
 
-    double coswidth = 2.0;
-    // double cosval = coswidth * frandom();
-    double costheta = coswidth * frandom() - 1.0;
+    double cosmax = 1.0; // Should be ~0.95 for electron scattering to prevent Mott blowup
+    double cosmin = -1.0;
+
+    double coswidth = cosmax - cosmin;
+    double costheta = coswidth * frandom() + cosmin
 
 
     double eps = lepton_in.t;
-    double k = eps; // Because neutrino mass is approx zero
+    double k = eps; // Because neutrino mass is approx zero, holds OK for electron as well
 
     double eps_prim_min = m_l;
     double eps_prim_max = eps;
 
     double w_min = eps-eps_prim_max;
-    double w_max = eps-eps_prim_min;
+    double w_max = min(eps-eps_prim_min, 1100.0);
 
-    // double wwidth = 1200.0;
     double wwidth = w_max - w_min;
 
     double w = wwidth * frandom() + w_min;
@@ -147,10 +148,9 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         return 0.0;
     }
 
-    xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti) * wwidth * coswidth;// * 2.0 * Pi;// * sin(acos(costheta));
-
-    // double active_nucleon_compensation = (double)((is_anti)?t.p:t.n) / (double)t.A();
-    // xsec /= active_nucleon_compensation;
+    xsec = calc_xsec(costheta, q, omega, k, k_prim, eps, eps_prim, m_l, is_anti) * wwidth * coswidth * 2.0 * Pi;// * sin(acos(costheta));
+                                                                                                            
+    xsec /= is_anti ? t.p:t.n; // Convert from per-nucleus to per-nucleon xsec. This also compensates for the active nucleon count
 
     // std::cout << q_final << std::endl;
 
@@ -162,7 +162,6 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     lepton_out.y = momentum_perpendicular * sin(azimuth);
     lepton_out.z = k_prim * costheta;
 
-    // xsec *= 10e-3; // To GeV?
 
     if (xsec <= 0.0){
         e.weight = 0.0;
@@ -236,16 +235,16 @@ double calc_xsec(double costheta, double q, double omega, double k, double k_pri
     yfrac = omega /spacing - table_y;
 
     // List of pointers to curves
-    double *curves[] = {lfg_R00, lfg_R0z, lfg_Rzz, lfg_Rxx, lfg_Rxy};
+    // double *curves[] = {lfg_R00, lfg_R0z, lfg_Rzz, lfg_Rxx, lfg_Rxy};
     double resolved_vals[] = {0.0, 0.0, 0.0, 0.0, 0.0};
 
     for(int i = 0; i < 5; i++){
         double val__, valx_, val_y, valxy;
 
-        val__ = curves[i][Stupid_2D_to_1D(table_x + 0, table_y + 0, gridsteps)];
-        valx_ = curves[i][Stupid_2D_to_1D(table_x + 1, table_y + 0, gridsteps)];
-        val_y = curves[i][Stupid_2D_to_1D(table_x + 0, table_y + 1, gridsteps)];
-        valxy = curves[i][Stupid_2D_to_1D(table_x + 1, table_y + 1, gridsteps)];
+        val__ = neutrino_nrfs[i][Stupid_2D_to_1D(table_x + 0, table_y + 0, gridsteps)];
+        valx_ = neutrino_nrfs[i][Stupid_2D_to_1D(table_x + 1, table_y + 0, gridsteps)];
+        val_y = neutrino_nrfs[i][Stupid_2D_to_1D(table_x + 0, table_y + 1, gridsteps)];
+        valxy = neutrino_nrfs[i][Stupid_2D_to_1D(table_x + 1, table_y + 1, gridsteps)];
 
         double valA, valB;
 
@@ -280,6 +279,99 @@ double calc_xsec(double costheta, double q, double omega, double k, double k_pri
     // std::cout << q << " " << omega << " " << xsec << std::endl;
 
     xsec *= G * G / (8. * PI * PI) * k_prim / eps;
+
+    return xsec;
+}
+
+
+double calc_xsec_EM(double costheta, double q, double omega, double k, double k_prim, double eps, double eps_prim, double m_l, bool is_anti){
+    double spacing = 4.0;
+    int gridsteps = 300;
+    double PI = 3.14159265359;
+    double fine_structure = 1.0/137.036;
+
+
+
+
+
+    // double Q_sq = -q2;
+    double Q_sq = q*q - omega*omega;
+    double theta = acos(costheta);
+
+    // std::cout << "q: " << q << " omega: " << omega << " k: " << k << " k_prim: " << k_prim << " eps: " << eps << " eps': " << eps_prim << std::endl;
+
+
+    // q = k - k'
+    // q^2 = kk - 2kk' + k'k'
+    // kk' = |k||k'|cos(theta)
+    // cos(theta) = (kk + k'k' - q^2) / (2|k||k'|)
+    // double temp = (k*k + k_prim * k_prim - q*q) / (2.0 * k * k_prim);
+    // -> costheta * 2 * k * k_prim - k * k - k_prim * k_prim = q^2
+    // double costheta = temp;
+
+
+
+
+    //  w/y
+    //  ^  2  3 
+    //  |  
+    //  |  0  1
+    //   -----> q/x
+
+    int table_x, table_y;
+    double xfrac, yfrac;
+
+    table_x = (int)floor(q/spacing);
+    table_y = (int)floor(omega/spacing);
+    // std::cout << table_x << " " << table_y << std::endl;
+    // std::cout << q << " " << omega << std::endl;
+    xfrac = q/spacing - table_x;
+    yfrac = omega /spacing - table_y;
+
+    double resolved_vals[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+    for(int i = 0; i < 2; i++){
+        double val__, valx_, val_y, valxy;
+
+        val__ = electron_nrfs[i][Stupid_2D_to_1D(table_x + 0, table_y + 0, gridsteps)];
+        valx_ = electron_nrfs[i][Stupid_2D_to_1D(table_x + 1, table_y + 0, gridsteps)];
+        val_y = electron_nrfs[i][Stupid_2D_to_1D(table_x + 0, table_y + 1, gridsteps)];
+        valxy = electron_nrfs[i][Stupid_2D_to_1D(table_x + 1, table_y + 1, gridsteps)];
+
+        double valA, valB;
+
+        valA = (1.0 - xfrac) * val__ + xfrac * valx_;
+        valB = (1.0 - xfrac) * val_y + xfrac * valxy;
+
+        double final_val = (1.0 - yfrac) * valA + yfrac * valB;
+        resolved_vals[i] = final_val;
+    }
+
+    double vRL, vRT;
+
+    double xsec_mott = fine_structure*fine_structure * cos(theta/2.0)*cos(theta/2.0) / (4.0 * eps * eps * pow(sin(theta/2.0), 4));
+
+    vRL = pow(Q_sq / (q*q), 2);
+    vRT = Q_sq/(2.0 * q * q) + pow(tan(theta/2.0), 2);
+
+    double vxy_sign = -1.0; // If neutrino, I think it should be positive for antineutrinos
+    if (is_anti){
+        vxy_sign *= -1.0;
+    }
+
+    double coefficients[] = {vRL, vRT};
+
+    double xsec = 0.0;
+    for(int i = 0; i < 2; i++){
+        xsec += coefficients[i] * resolved_vals[i];
+        // xsec += resolved_vals[i];
+    }
+    xsec *= xsec_mott;
+    // std::cout << "  " << xsec << std::endl;
+
+    // std::cout << q << " " << omega << " " << xsec << std::endl;
+
+    // xsec *= G * G / (8. * PI * PI) * k_prim / eps;
 
     return xsec;
 }
