@@ -17,6 +17,8 @@
 #include "nucleus_data.h"
 #include "dis/LeptonMass.h"
 #include <cstdlib>
+#include <algorithm>
+
 
 #define LOCALKF localkf_O
 
@@ -33,6 +35,91 @@
 
 int Stupid_2D_to_1D(int n, int m, int N){
     return n*N + m;
+}
+
+struct BenharCDF
+{
+    std::vector<double> p, cdf;
+
+    BenharCDF(){
+        std::ifstream file;
+        if (!open_data_file(file, "sf/O16_Ben.dat"))
+            throw std::runtime_error("Cannot open sf/O16_Ben.dat");
+        double pval, density;
+        std::vector<double> densities;
+        while (file >> pval >> density)
+        {
+            p.push_back(pval);
+            densities.push_back(density * pval * pval);
+        }
+
+        cdf.push_back(0.0);
+        for (size_t i = 0; i+1 < p.size(); ++i)
+        {
+            cdf.push_back(cdf.back() + (p[i+1]-p[i])*(densities[i+1]+densities[i])/2.0); // /2 is normalised away anyways
+        }
+
+        double norm = cdf.back();
+        for (double &c:cdf) c /= norm;
+    }
+
+    double sample(double lower_bound, double u) const{
+        double lower;
+        if (lower_bound < p.front()) {
+            lower = 0.0;
+        }else if (lower_bound >= p.back()) {
+            lower = 1.0;
+        }else{
+            size_t idx = std::upper_bound(p.begin(), p.end(), lower_bound) - p.begin() - 1;
+            double interp = (lower_bound - p[idx]) / (p[idx+1] - p[idx]);
+            lower = cdf[idx] + interp * (cdf[idx+1] - cdf[idx]);
+        }
+        
+        const double target = lower + u * (1.0 - lower);
+        size_t idx = std::upper_bound(cdf.begin(), cdf.end(), target) - cdf.begin() - 1;
+        idx = std::min(idx, cdf.size()-2);
+
+        const double diff = cdf[idx+1] - cdf[idx];
+        const double interp = diff > 0.0 ? (target - cdf[idx]) / diff : 0.0;
+        return p[idx] + interp * (p[idx+1] - p[idx]);
+    }
+};
+
+static bool assign_nucleon_momentum (nucleus &t, particle &nucleon_in, particle &nucleon_out, vec q_vec, double q, double omega, double E_sep)
+{
+    static const BenharCDF distribution;
+    const double m_i = nucleon_in.mass(), m_f = nucleon_out.mass();
+    
+    const double delta = omega-E_sep;
+
+    const double A_sq = (q-delta)*(q+delta); // (q^2 - delta^2)
+    const double A = std::sqrt(A_sq);
+
+    const double b = m_i*m_i - m_f*m_f - A_sq;
+    const double D = std::hypot(b, 2.0*m_i * A);
+    
+    const double p_min = std::abs(q * b + delta * D)/(2.0 * A_sq);
+
+    if (p_min >= 800.0){
+        return false; // No support in data
+    }
+
+    double u = frandom();
+
+    const double p_sample = distribution.sample(p_min, u);
+    const double E_i = std::hypot(m_i, p_sample);
+    const double E_f = E_i + delta;
+
+    double costheta = (2.0 * E_i * delta + b)/(2.0 * p_sample * q);// theta for nucleons, not lepton
+
+    const double phi = 2.0 * M_PI * frandom();
+    const double sintheta = std::sqrt(std::max(0.0, 1.0 - costheta*costheta));
+
+    vec p_in(p_sample * sintheta * cos(phi), p_sample * sintheta * sin(phi), p_sample * costheta);
+
+    nucleon_in.set_momentum(p_in);
+    nucleon_out.set_momentum(p_in + q_vec);
+    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -103,7 +190,7 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
     double cosmin = -1.0;
 
     double coswidth = cosmax - cosmin;
-    double costheta = coswidth * frandom() + cosmin
+    double costheta = coswidth * frandom() + cosmin;
 
 
     double eps = lepton_in.t;
@@ -178,6 +265,16 @@ double ab_initio_event(params &p, event &e, nucleus &t, bool nc)
         return 0;
     }
     // std::cout << "Event OK " << std::endl;
+
+
+    const vec q_vec = lepton_in.p() - lepton_out.p();
+    // Local Fermi kinetic energy plus a fixed 7 MeV energy cost.
+    const double energy_cost = t.Ef(nucleon_in) + 7.0 * MeV;
+
+    if(!assign_nucleon_momentum(t, nucleon_in, nucleon_out, q_vec, q, omega, energy_cost)){
+        e.weight = 0.0;
+        return 0.0;
+    }
 
 
     e.temp.push_back(lepton_out);
